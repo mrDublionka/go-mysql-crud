@@ -11,8 +11,11 @@ import (
 
 func main() {
 	r := mux.NewRouter()
+
 	routes.RegisterBlogRoutes(r)
 	http.Handle("/", r)
-	models.InitDB()
+	dsn := "root:@tcp(127.0.0.1:3306)/go_crud?parseTime=true"
+	models.InitDB(dsn)
+
 	log.Fatal(http.ListenAndServe("localhost:9010", r))
 }
