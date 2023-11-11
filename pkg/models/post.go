@@ -41,13 +41,19 @@ func (p *Post) CreatePost() *Post {
 	return p
 }
 
+func (l *Like) CreateLike() *Like {
+	db.NewRecord(l)
+	db.Create(&l)
+	return l
+}
+
 func GetAllPosts() []Post {
 	var Posts []Post
 	db.Find(&Posts)
 	return Posts
 }
 
-func GetPostId(id int64) (*Post, error) {
+func GetPostById(id int64) (*Post, error) {
 	var post Post
 	if err := db.Where("id = ?", id).First(&post).Error; err != nil {
 		if gorm.IsRecordNotFoundError(err) {
@@ -55,7 +61,16 @@ func GetPostId(id int64) (*Post, error) {
 		}
 		return nil, err
 	}
+
 	return &post, nil
+}
+
+func (l *Like) CheckIfIsLiked(postID uint, userID uint) bool {
+	var like Like
+	if err := db.Where("post_id = ? AND user_id = ?", postID, userID).First(&like).Error; gorm.IsRecordNotFoundError(err) {
+		return false
+	}
+	return true
 }
 
 func DeletePost(db *gorm.DB, ID int64) Post {

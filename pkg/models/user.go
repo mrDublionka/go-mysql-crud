@@ -7,10 +7,10 @@ import (
 type User struct {
 	gorm.Model // Embed the default fields from gorm.Model
 
-	UserName     string `json:"userName"`
-	UserEmail    string `json:"userEmail"`
-	UserPwd      string `json:"userPwd" gorm:"unique"`
-	PostsCreated []Post `json:"postsCreated"`
+	UserName     string `json:"user_name"`
+	UserEmail    string `json:"user_email"`
+	UserPwd      string `json:"user_pwd" gorm:"unique"`
+	PostsCreated []Post `json:"posts_created"`
 	Photo        string `json:"photo"`
 	Popular      bool   `json:"popular" default:"false"`
 }

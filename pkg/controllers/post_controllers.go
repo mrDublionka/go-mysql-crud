@@ -31,6 +31,7 @@ func GetPosts(w http.ResponseWriter, r *http.Request) {
 }
 
 func GetPostById(w http.ResponseWriter, r *http.Request) {
+	println(2)
 	vars := mux.Vars(r)
 	postId := vars["postId"]
 	ID, err := strconv.ParseInt(postId, 0, 0)
@@ -40,7 +41,7 @@ func GetPostById(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	post, err := models.GetPostId(ID)
+	post, err := models.GetPostById(ID)
 	if err != nil {
 		fmt.Println("Error while fetching post:", err)
 		http.Error(w, "Error while fetching post", http.StatusInternalServerError)
@@ -58,33 +59,105 @@ func GetPostById(w http.ResponseWriter, r *http.Request) {
 	w.Write(res)
 }
 
-func UpdatePost(w http.ResponseWriter, r *http.Request) {
-	var updatePost = &models.Post{}
-	utils.ParseBody(r, updatePost)
-	vars := mux.Vars(r)
-	postId := vars["postId"]
-	ID, err := strconv.ParseInt(postId, 0, 0)
+func LikePost(w http.ResponseWriter, r *http.Request) {
+	println("hello 1")
+	CreateLike := &models.Like{}
+	// Attempt to retrieve the user from the request token.
+	user, err := GetUserFromToken(r)
 	if err != nil {
-		fmt.Println("error while parsing")
+		http.Error(w, err.Error(), http.StatusUnauthorized)
+		return
 	}
-	postDetails, db := models.GetPostById(db, ID)
-	if updatePost.Title != "" {
-		postDetails.Title = updatePost.Title
-	}
+	println("hello 2")
+	postId := r.URL.Query().Get("id")
+	userId := fmt.Sprint(user.ID) // Assuming user.ID is the authenticated user's ID.
 
-	if updatePost.Content != "" {
-		postDetails.Content = updatePost.Content
+	if postId == "" || userId == "" {
+		http.Error(w, "Post ID and User ID are required", http.StatusBadRequest)
+		return
 	}
+	println("hello 3")
+	// Parse the post ID to an unsigned integer.
+	ID, err := strconv.ParseInt(postId, 0, 0)
 
-	db.Save(&postDetails)
-	res, _ := json.Marshal(postDetails)
-	w.Header().Set("Content-Type", "pkglication/json")
-	w.WriteHeader(http.StatusOK)
-	w.Write(res)
+	if err != nil {
+		http.Error(w, "Invalid post ID", http.StatusBadRequest)
+		return
+	}
+	// Parse the user ID to an unsigned integer.
+	userIDUint, err := strconv.ParseUint(userId, 10, 32)
+	if err != nil {
+		http.Error(w, "Invalid user ID", http.StatusBadRequest)
+		return
+	}
+	// Check if the like already exists for the post by the user.
+	//var like models.Like
+	if !CreateLike.CheckIfIsLiked(uint(ID), uint(userIDUint)) {
+		// The like does not exist, so create a new Like entry.
+		newLike := models.Like{
+			PostID: uint(ID),
+			UserID: uint(userIDUint),
+		}
+		// Use the CreateLike method to create the Like record in the database.
+		createdLike := newLike.CreateLike()
+		if createdLike == nil {
+			// If creating the like failed, respond with an internal server error.
+			http.Error(w, "Could not create like", http.StatusInternalServerError)
+			return
+		}
+
+		// Prepare the response with the new like's data.
+		response := map[string]uint{
+			"post_id": createdLike.PostID,
+			"user_id": createdLike.UserID,
+		}
+
+		// Marshal the response map to JSON.
+		res, err := json.Marshal(response)
+		if err != nil {
+			http.Error(w, "Failed to marshal response", http.StatusInternalServerError)
+			return
+		}
+
+		// Set the response header to 'Content-Type: application/json'.
+		w.Header().Set("Content-Type", "application/json")
+		// Write the response with status code 201 Created.
+		w.WriteHeader(http.StatusCreated)
+		w.Write(res)
+	} else {
+		// If the like already exists, respond with a status indicating no new resource was created.
+		w.WriteHeader(http.StatusNoContent)
+	}
+}
+
+func UpdatePost(w http.ResponseWriter, r *http.Request) {
+	//var updatePost = &models.Post{}
+	//utils.ParseBody(r, updatePost)
+	//vars := mux.Vars(r)
+	//postId := vars["postId"]
+	//ID, err := strconv.ParseInt(postId, 0, 0)
+	//if err != nil {
+	//	fmt.Println("error while parsing")
+	//}
+	//postDetails, db := models.GetPostById(ID)
+	//if updatePost.Title != "" {
+	//	postDetails.Title = updatePost.Title
+	//}
+	//
+	//if updatePost.Content != "" {
+	//	postDetails.Content = updatePost.Content
+	//}
+	//
+	//db.Save(&postDetails)
+	//res, _ := json.Marshal(postDetails)
+	//w.Header().Set("Content-Type", "pkglication/json")
+	//w.WriteHeader(http.StatusOK)
+	//w.Write(res)
 
 }
 
 func DeletePost(w http.ResponseWriter, r *http.Request) {
+	println(1)
 	vars := mux.Vars(r)
 	postId := vars["postId"]
 	ID, err := strconv.ParseInt(postId, 0, 0)
@@ -98,5 +171,22 @@ func DeletePost(w http.ResponseWriter, r *http.Request) {
 	res, _ := json.Marshal(post)
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
+	w.Write(res)
+}
+
+func TestPost(w http.ResponseWriter, r *http.Request) {
+	response := map[string]string{
+		"test": "Hello",
+	}
+
+	res, err := json.Marshal(response)
+	if err != nil {
+		http.Error(w, "Failed to marshal response", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	// Write the response with status code 201 Created.
+	w.WriteHeader(http.StatusCreated)
 	w.Write(res)
 }
