@@ -7,16 +7,17 @@ import (
 type Post struct {
 	gorm.Model
 
-	ID       uint      `gorm:"primary_key;auto_increment" json:"id"`
-	Title    string    `json:"title"`
-	Content  string    `json:"content"`
-	UserID   uint      `json:"user_id"`
-	Image    string    `json:"image"`
-	Likes    []Like    `gorm:"foreignkey:PostID" json:"likes"`
-	Comments []Comment `gorm:"foreignkey:PostID" json:"comments"`
-	Topic    string    `json:"topic"`
-	Date     uint      `json:"date"`
-	Deleted  bool      `json:"deleted" default:"false"`
+	ID        uint      `gorm:"primary_key;auto_increment" json:"id"`
+	Title     string    `json:"title"`
+	Content   string    `json:"content"`
+	UserID    uint      `json:"user_id"`
+	Image     string    `json:"image"`
+	ImageName string    `json:"image_name"`
+	Likes     []Like    `gorm:"foreignkey:PostID" json:"likes"`
+	Comments  []Comment `gorm:"foreignkey:PostID" json:"comments"`
+	Topic     string    `json:"topic"`
+	Date      uint      `json:"date"`
+	Deleted   bool      `json:"deleted" default:"false"`
 }
 
 type Like struct {

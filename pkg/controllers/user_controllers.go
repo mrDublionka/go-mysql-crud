@@ -32,7 +32,7 @@ func CreateUser(w http.ResponseWriter, r *http.Request) {
 	UserToCreate := &models.User{}
 	utils.ParseBody(r, UserToCreate)
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(UserToCreate.UserPwd), bcrypt.DefaultCost)
-
+	println("Hello")
 	if err != nil {
 		log.Printf("Error hashing the password: %v\n", err)
 		http.Error(w, "Error hashing the password", http.StatusInternalServerError)

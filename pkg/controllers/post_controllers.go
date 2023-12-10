@@ -7,16 +7,62 @@ import (
 	"github.com/mrDublionka/go-mysql-crud/pkg/config"
 	"github.com/mrDublionka/go-mysql-crud/pkg/models"
 	"github.com/mrDublionka/go-mysql-crud/pkg/utils"
+	"io"
 	"net/http"
 	"strconv"
 )
 
 var db = config.GetDB()
 
-func CreatePost(w http.ResponseWriter, r *http.Request) {
+func (ic *ImageControllers) CreatePost(w http.ResponseWriter, r *http.Request) {
+	err := r.ParseMultipartForm(10 << 20) // 10 MB limit
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	// Extract form values
+	title := r.FormValue("title")
+	content := r.FormValue("content")
+	topic := r.FormValue("topic")
+	userIDString := r.FormValue("userID")
+	userID, err := strconv.ParseUint(userIDString, 10, 32)
+
 	CreatePost := &models.Post{}
 	utils.ParseBody(r, CreatePost)
+	println(CreatePost)
+
+	file, handler, err := r.FormFile("image")
+
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		fmt.Println(err)
+		return
+	}
+
+	defer file.Close()
+
+	bucketName := "blog-next-php.appspot.com"
+	objectName := handler.Filename
+
+	wc := ic.storage.Bucket(bucketName).Object(objectName).NewWriter(ic.ctx)
+	_, err = io.Copy(wc, file)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	if err := wc.Close(); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	CreatePost.Title = title
+	CreatePost.Content = content
+	CreatePost.Topic = topic
+	CreatePost.UserID = uint(userID)
+	CreatePost.Image = "https://storage.googleapis.com/" + bucketName + "/" + objectName
+	CreatePost.ImageName = objectName
+
 	b := CreatePost.CreatePost()
+
 	res, _ := json.Marshal(b)
 	w.WriteHeader(http.StatusOK)
 	w.Write(res)
@@ -90,8 +136,7 @@ func LikePost(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Invalid user ID", http.StatusBadRequest)
 		return
 	}
-	// Check if the like already exists for the post by the user.
-	//var like models.Like
+
 	if !CreateLike.CheckIfIsLiked(uint(ID), uint(userIDUint)) {
 		// The like does not exist, so create a new Like entry.
 		newLike := models.Like{
